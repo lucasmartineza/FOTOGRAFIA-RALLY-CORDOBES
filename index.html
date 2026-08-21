@@ -11,6 +11,10 @@
     --blanco: #f4f4f4;
     --gris: #1a1a1a;
     --gris-borde: #2a2a2a;
+    --alto-franja: 64px;
+  }
+  @media (max-width: 600px) {
+    :root { --alto-franja: 48px; }
   }
   * { box-sizing: border-box; }
   body {
@@ -19,6 +23,7 @@
     color: var(--blanco);
     font-family: 'Segoe UI', Arial, sans-serif;
     min-height: 100vh;
+    padding-bottom: var(--alto-franja);
   }
   header {
     padding: 20px 20px 14px;
@@ -154,13 +159,14 @@
 
   .barra-seleccion {
     position: fixed;
-    bottom: 0; left: 0; right: 0;
+    bottom: var(--alto-franja); left: 0; right: 0;
     background: var(--gris);
     border-top: 1px solid var(--lima);
     padding: 12px 20px;
     display: none;
     justify-content: space-between;
     align-items: center;
+    z-index: 90;
   }
   .barra-seleccion.activa { display: flex; }
   .btn-lima {
@@ -280,6 +286,46 @@
     border-top: 1px solid var(--gris-borde);
   }
   footer.contacto a { color: var(--lima); }
+
+  /* ===== FRANJA DE SPONSORS (autoroll) ===== */
+  .franja-sponsors {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--alto-franja);
+    background: var(--gris);
+    border-top: 1px solid var(--gris-borde);
+    overflow: hidden;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+  }
+  .franja-sponsors .track {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    white-space: nowrap;
+    padding-left: 48px;
+    animation: desplazar-sponsors 28s linear infinite;
+    will-change: transform;
+  }
+  .franja-sponsors:hover .track {
+    animation-play-state: paused;
+  }
+  .franja-sponsors .track img {
+    height: 40px;
+    width: 160px;
+    object-fit: contain;
+    flex-shrink: 0;
+    opacity: 0.92;
+  }
+  @media (max-width: 600px) {
+    .franja-sponsors .track img { height: 28px; width: 112px; }
+    .franja-sponsors .track { gap: 32px; padding-left: 32px; animation-duration: 20s; }
+  }
+  @keyframes desplazar-sponsors {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
 </style>
 </head>
 <body>
@@ -333,10 +379,63 @@
   <a href="https://wa.me/5490000000000" target="_blank">Lucas Martínez</a>
 </footer>
 
+<div class="franja-sponsors" id="franjaSponsors">
+  <div class="track" id="trackSponsors"></div>
+</div>
+
 <script>
 // ======= CONFIGURACIÓN =======
 const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzNyACKmpiYiVgIhKw-twzN5bM1xXgAmHhynXbx6rjcXobVRANouN7AfHzuQjzkzc5Y/exec';
 const ROOT_FOLDER_ID = '1ADqvynC4y9OEBF3vm7CqSr31KI9WEKkA';
+
+// ======= SPONSORS (franja inferior con autoroll) =======
+// Reemplazá "logoUrl" por la ruta real una vez que subas los logos a una
+// carpeta "sponsors/" en el mismo repo de GitHub (ej: 'sponsors/sponsor-michelin.png').
+// "link" es opcional: si lo completás, el logo es clickeable y abre esa web.
+const SPONSORS = [
+  { nombre: 'AMP', logoUrl: 'sponsors/ok%20amp.png', link: '' },
+  { nombre: 'Cadena 3', logoUrl: 'sponsors/ok%20cadena3.png', link: '' },
+  { nombre: 'CBA', logoUrl: 'sponsors/ok%20cba.png', link: '' },
+  { nombre: 'Iveco', logoUrl: 'sponsors/ok%20iveco.png', link: '' },
+  { nombre: 'Larrosa', logoUrl: 'sponsors/ok%20larrosa.png', link: '' },
+  { nombre: 'Lusqtoff', logoUrl: 'sponsors/ok%20lusqtoff.png', link: '' },
+  { nombre: 'Midea', logoUrl: 'sponsors/ok%20midea.png', link: '' },
+  { nombre: 'Motor Total', logoUrl: 'sponsors/ok%20motor%20total.png', link: '' },
+  { nombre: 'Pirelli', logoUrl: 'sponsors/ok%20pirelli.png', link: '' },
+  { nombre: 'Rumipal', logoUrl: 'sponsors/ok%20rumipal.png', link: '' },
+  { nombre: 'RUS', logoUrl: 'sponsors/ok%20rus.png', link: '' },
+  { nombre: 'Vittal', logoUrl: 'sponsors/ok%20vittal.png', link: '' },
+  { nombre: 'Workia', logoUrl: 'sponsors/ok%20workia.png', link: '' },
+];
+
+function renderizarSponsors() {
+  const track = document.getElementById('trackSponsors');
+  if (!SPONSORS.length) {
+    document.getElementById('franjaSponsors').style.display = 'none';
+    document.body.style.paddingBottom = '0';
+    return;
+  }
+
+  // duplicamos la lista para que el loop sea perfectamente continuo (translateX -50%)
+  const listaDoble = SPONSORS.concat(SPONSORS);
+
+  track.innerHTML = '';
+  listaDoble.forEach(s => {
+    const img = document.createElement('img');
+    img.src = s.logoUrl;
+    img.alt = s.nombre;
+    if (s.link) {
+      const a = document.createElement('a');
+      a.href = s.link;
+      a.target = '_blank';
+      a.appendChild(img);
+      track.appendChild(a);
+    } else {
+      track.appendChild(img);
+    }
+  });
+}
+renderizarSponsors();
 
 // ======= ESTADO =======
 let pila = [{ id: ROOT_FOLDER_ID, nombre: 'Carreras' }]; // breadcrumb stack
