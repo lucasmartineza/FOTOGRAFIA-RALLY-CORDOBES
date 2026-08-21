@@ -11,10 +11,10 @@
     --blanco: #f4f4f4;
     --gris: #1a1a1a;
     --gris-borde: #2a2a2a;
-    --alto-franja: 64px;
+    --alto-franja: 128px;
   }
   @media (max-width: 600px) {
-    :root { --alto-franja: 48px; }
+    :root { --alto-franja: 96px; }
   }
   * { box-sizing: border-box; }
   body {
@@ -292,8 +292,8 @@
     position: fixed;
     bottom: 0; left: 0; right: 0;
     height: var(--alto-franja);
-    background: var(--gris);
-    border-top: 1px solid var(--gris-borde);
+    background: #ffffff;
+    border-top: 1px solid #e2e2e2;
     overflow: hidden;
     z-index: 80;
     display: flex;
@@ -302,9 +302,9 @@
   .franja-sponsors .track {
     display: flex;
     align-items: center;
-    gap: 48px;
+    gap: 64px;
     white-space: nowrap;
-    padding-left: 48px;
+    padding-left: 64px;
     animation: desplazar-sponsors 28s linear infinite;
     will-change: transform;
   }
@@ -312,15 +312,15 @@
     animation-play-state: paused;
   }
   .franja-sponsors .track img {
-    height: 40px;
-    width: 160px;
+    height: 80px;
+    width: 320px;
     object-fit: contain;
     flex-shrink: 0;
-    opacity: 0.92;
+    opacity: 1;
   }
   @media (max-width: 600px) {
-    .franja-sponsors .track img { height: 28px; width: 112px; }
-    .franja-sponsors .track { gap: 32px; padding-left: 32px; animation-duration: 20s; }
+    .franja-sponsors .track img { height: 56px; width: 224px; }
+    .franja-sponsors .track { gap: 40px; padding-left: 40px; animation-duration: 20s; }
   }
   @keyframes desplazar-sponsors {
     from { transform: translateX(0); }
