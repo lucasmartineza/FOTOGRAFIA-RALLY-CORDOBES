@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rally Cordobés - Galería</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --lima: #c6ff00;
+    --blanco: #f4f4f4;
+    --gris: #1a1a1a;
+    --gris-borde: #2a2a2a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--blanco);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 20px 20px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--gris-borde);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 50;
+  }
+  header .logo {
+    max-width: 260px;
+    width: 60%;
+    height: auto;
+    display: block;
+    margin: 0 auto 8px;
+  }
+  header p.tagline {
+    margin: 0;
+    color: var(--lima);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    font-weight: bold;
+  }
+  .fila-volver {
+    display: flex;
+    justify-content: center;
+    padding: 14px 20px 4px;
+  }
+  .btn-volver {
+    background: var(--gris);
+    border: 2px solid var(--lima);
+    color: var(--lima);
+    border-radius: 999px;
+    padding: 10px 28px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .btn-volver:hover { background: var(--lima); color: #000; }
+  .btn-volver.oculto { display: none; }
+  .breadcrumb {
+    padding: 8px 20px 4px;
+    font-size: 0.85rem;
+    color: #999;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    align-items: center;
+  }
+  .breadcrumb span.crumb {
+    cursor: pointer;
+    color: var(--lima);
+  }
+  .breadcrumb span.crumb:hover { text-decoration: underline; }
+  .breadcrumb span.sep { color: #555; }
+
+  #contenido { padding: 8px 20px 60px; }
+
+  .botonera {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .boton-carpeta {
+    background: var(--gris);
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    padding: 18px 14px;
+    color: var(--blanco);
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: border-color .15s, transform .15s;
+    flex: 0 1 160px;
+    max-width: 200px;
+  }
+  .boton-carpeta:hover {
+    border-color: var(--lima);
+    transform: translateY(-2px);
+  }
+
+  .vacio {
+    color: #777;
+    padding: 40px 0;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .galeria {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .foto-card {
+    position: relative;
+    background: var(--gris);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+  }
+  .foto-card.seleccionada { border-color: var(--lima); }
+  .foto-card img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+    cursor: pointer;
+  }
+  .foto-check {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 22px;
+    height: 22px;
+    accent-color: var(--lima);
+  }
+  .foto-acciones {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+  .foto-acciones a {
+    color: var(--lima);
+    text-decoration: none;
+  }
+
+  .barra-seleccion {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--gris);
+    border-top: 1px solid var(--lima);
+    padding: 12px 20px;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .barra-seleccion.activa { display: flex; }
+  .btn-lima {
+    background: var(--lima);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .btn-lima:disabled { opacity: 0.5; cursor: default; }
+
+  .boton-carpeta.en-vivo {
+    border-color: var(--lima);
+    position: relative;
+    animation: pulso-glow 1.8s ease-in-out infinite;
+  }
+  .boton-carpeta.en-vivo .badge-vivo {
+    display: inline-block;
+    margin-bottom: 4px;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    color: var(--lima);
+    font-weight: bold;
+  }
+  .boton-carpeta.en-vivo .badge-vivo::before {
+    content: '●';
+    margin-right: 4px;
+    animation: parpadeo 1.2s infinite;
+  }
+  @keyframes pulso-glow {
+    0%, 100% { box-shadow: 0 0 6px 1px rgba(198,255,0,0.5); }
+    50% { box-shadow: 0 0 22px 6px rgba(198,255,0,0.85); }
+  }
+  @keyframes parpadeo {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ===== LIGHTBOX ===== */
+  .lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 20px;
+  }
+  .lightbox-overlay.activo { display: flex; }
+  .lightbox-overlay img {
+    max-width: 92vw;
+    max-height: 72vh;
+    object-fit: contain;
+    border-radius: 6px;
+    transition: filter .25s ease;
+  }
+  .lightbox-overlay img.cargando-hd {
+    filter: blur(2px) brightness(0.92);
+  }
+  .lightbox-credito {
+    color: #aaa;
+    font-size: 0.8rem;
+    margin-top: 10px;
+    text-align: center;
+  }
+  .lightbox-credito span { color: var(--lima); }
+  .lightbox-acciones {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .btn-cerrar-lightbox {
+    background: transparent;
+    border: 1px solid var(--gris-borde);
+    color: var(--blanco);
+    border-radius: 6px;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+  .btn-cerrar-lightbox:hover { border-color: var(--lima); }
+
+  .lightbox-flecha {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(26,26,26,0.75);
+    border: 1px solid var(--gris-borde);
+    color: var(--lima);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 210;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox-flecha:hover { border-color: var(--lima); }
+  .lightbox-flecha:disabled { opacity: 0.25; cursor: default; }
+  .lightbox-flecha.izquierda { left: 10px; }
+  .lightbox-flecha.derecha { right: 10px; }
+  @media (max-width: 600px) {
+    .lightbox-flecha { width: 40px; height: 40px; font-size: 1.2rem; }
+  }
+
+  footer.contacto {
+    padding: 20px;
+    text-align: center;
+    color: #888;
+    font-size: 0.8rem;
+    border-top: 1px solid var(--gris-borde);
+  }
+  footer.contacto a { color: var(--lima); }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 343.86 98.84" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>.cls-1 { fill: #8ed204; fill-rule: evenodd; }</style>
+    </defs>
+    <g>
+      <path class="cls-1" d="M302.88,46.68c-12.05.57-11.49,1.33-22.14,2.95-3.73.57-7.58.84-11.35,1.3-5.26.64-5.91,1.16-10.91-.46-5.59-1.81-17.31-.72-23.7-.39-8.03.42-15.97.7-23.98,1.16-7.83.45-15.68,1.21-23.52,1.6-7.88.39-3.73-1.01-11.65-.91l-37.28.17-.37-1.58c-4.46-1.47-28.8-1.71-34.39-1.33-3.93.26-4.29.53-7.5,1.64-8.79,3.03-22.01.46-24.88,1.44-.79-.42-1.09-.24-3.03-.32-8.25-.33-9.74.09-17.07-3.38,1.84-1.31,6.16-.82,8.77-.88,3.28-.08,6.34-.24,9.57-.39.83-.95,1.78-2.36,2.69-3.57.82-1.09,1.85-2.56,2.63-3.42h11.77c.31.8.84,1.62,1.3,2.5.35.66.36.66.55,1.38l.33,1.17c.25.59.05.21.27.5,2.32,1.97,83.84.34,99.09.25,2.83-.02,3.99-.21,6.53-.79,2.13-.49,4.58-.36,6.94-.43,2.25-5.75,1.94-8.6,5.88-10.91,14.29-8.38,35.53-16.19,50.91-22.36,2.11-.84,5.99-3.13,8.31-2.77.9.14,6.33,3.12,7.48,3.75,2.39,1.3,4.86,2.63,7.36,3.87,2.37,1.17,5.1,3.42,8.34,2.95,3.05-.44,6-2.44,9.25-1.25,3.71,1.36,19.37,10.7,22.27,11.48-6.12-3.74-13.51-7.8-19.06-11.28-2.57-1.61-3.9-2.82-7.92-2.22-10.21,1.52-8.02,1.24-15.23-3.45-2.72-1.77-9.69-7.09-13.15-7.37-4.77-.38-24.44,8.58-30.05,10.74-4.8,1.85-9.83,3.9-14.6,5.92-4.28,1.81-10.14,5.14-15.01,5.7.64-2.21,5.06-7.79,6.43-9.64,2.26-3.05,4.12-6.4,6.51-9.45v-.02c.34-.59.55-.73.86-1.51-7.18-.17-14.41.19-21.55.39-7.82.21-12.64-1.01-19.77-2.13-5.8-.91-15.32-.09-21.52.02-7.31.12-14.63.4-21.98.56l-.21-.12c-.03.05-.04.08-.06.13h0s0,0,0,0c0,0,0,0,0,0-11.24.43-23.33.14-34.66.14-10.16,0-33.91.25-43.51-.69-4.31-.42-3.18-1.94-5.55-3.23-1.45-.79-5.98-.37-8.12-.64-1.8-.22-2.19-.38-4.12-.24-1.53.11-3.1.1-4.64.07C28.43,1.23,3.28-.38.15.08-.44,7.03.88,27.7,1.2,36.84c.12,3.3.23,8.88.84,11.93l3.06.13c1.35,1.5,1.56,2.42,1.44,5.04-1.04,5.12-.44,22.84,1.12,29.02.43,1.71,1.05,2.87,1.55,4.53.63,2.07,2.71,7.35,4.14,8.16.1.68.15.81.83,1.29,1.42,1,3.17,1.46,4.9,1.67,3.51.44,21.93.11,25.41-.07,2.75-.14,6.74-.68,9.39-1.5.95-.29.95-.39,1.48-.73,1.87-1.18,8.29,2.62,18.92,1.78,1.53-.12,2.23-.38,3.9-.34l12.7.25c5.71,0,11.37-.39,17.1-.4,11.38-.01,22.8-.26,34.19-.38,10.99-.12,23.52.47,34.2-.54,3.25-.31,4.44-.45,6.98-1.82,3-1.62,3.29-.91,7.16-.34,7.38,1.07,18.15-.27,25.66.45,3,.29,4.34.99,6.99,1.58,5.97,1.32,25.8-.06,32.45-.99,4.98-.7,9.67-2.51,14.94-2.58l-1.42-1.75,1.04-.42c.38.53.61,1.52.97,2.19,4.2.13,8.84-.53,13.2-.47,4.17.06,7.82,1.33,11.72,1.97,6.37,1.05,19.14.84,24.64-1.51,6.97-2.97,6.84-11.32,7.13-20.01.3-8.82.26-17.5-.39-26.26-3.32-.99-20.08-.26-24.55-.05ZM81.58,38.06c.58-.02,1.1-.06,1.49-.09.39-.04,1.15-.11,1.51.1-.36-.21-1.11-.14-1.51-.1-.39.04-.91.07-1.49.09ZM76.17,37.8c.07-.04.03.08.32.13-.29-.05-.25-.17-.32-.13ZM171.99,9.04l11.66.25c1.52,4.16,2.34,3.61,4.35,4.42-.86,1.6-1.11,1.28-3.02,1.94.94,1.02,3.57,1.43,4.09,2.86.33.91.07.16,0,.95-.17,1.77,4.15,1.78,5.04.7.7-.85.47-1.72,1.27-2.16.99-.54,1.2.21,2.6-.17.04-.01.13-.04.18-.08-.67-.29-1-.54-1.64-1.03,1.18-2.54,3.86-6.37,4.19-7.29h12.67c-.35.73,0,.32-.43.55-.58,1.23-1.63,2.47-2.47,3.59-.6.8-1.78,2.71-2.61,3.23-1.04-.54-1.48-1.24-2.57-.23.35.21,3.13-.07.86,2.76-1.33-.48-2.65-1.48-3.78-2.16-2.46-1.47-.53-1.73-3.47-1.99.29,1.58.93,1.61,2.02,2.48-.53.39-1.03.87-1.64,1.27.25.72.49.35,1.15,1.61-1.14.99-2.97,1.21-4.36,1.89-.22,2.81.49,2.18,1.96,2.93-1.03,2.22-.35,3.23-1.89,4.86-1.4-.01-1.98-.12-3,.52.45.89.78.85,1.67,1.16l-.36,2.5c1.38.68,1.46-.31,2.37,1.95-1.95,2.5-1.61.96-2.1,4.89-.14,1.15-.62,1.57-1.8,1.67-1.64.14-1.2-.22-2.4-.8l-.49.91h-2.93c-.87-.52-1.95-2.04-2.02-3.25.89-1.75,1.15-.44.78-3.16-.75-5.48,1.63-4.23-.02-7.29l-1.33-1.86c-.49-.47-.07-.16-.65-.49-.23-.58-1.23-1.49-1.4-2.03-.21-.66.61-1.65.76-2.52-1.51.18-.88.41-1.98,1.04-.25-.21-.11-.05-.37-.4-.11-.14-.2-.3-.29-.46-.97-1.6-.96-1.78-2.71-1.75.06-1.91-.08-2.15-1.16-3.42-1.32-1.55-2.38-1.69-2.32-3.12.83.56.48.66,1.6,1.13l-.35-1.58c.94-.4.74-.08,1.15-.96l-3.12-.76c-.56-.75-.15-.63-1-1.43-.71-.67-.77-.51-.69-1.69ZM145.91,35.7c.55-8.3-.23-17.94.22-26.42l12.26.03c-.28,1.18-.26,24.9.03,26.21l19.16.13c.96-.17,1.15-.71,2.17-.56.52.91.27,6.14.28,7.69-4.36.29-26.8-.55-27.92-.13-2.48.94-1.93.81-5.89.62-.19-1.05-.24-2.32,0-3.37.03-.11.05-.18.07-.24,0-.02.01-.04.02-.05.01-.03.02-.05.03-.07.01-.02.03-.03.04-.03h0c.04.27.05.02,0,0h0s-.01-.08-.02-.16c-.03-.25-.42-.51-.5-1.5-.05-.56.02-1.55.06-2.14ZM134.83,6.46c-.04.08-.04-.05-.36,0,.3-.05.33.05.36,0ZM134.47,6.46c-.08.01-.18.04-.31.08.13-.04.23-.07.31-.08ZM105.29,8.39l11.85.07.38,26.9c3.74.32,7.7-.08,11.47-.05,1.87.01,3.59.29,5.37.31,1.81.02,4.2-.72,5.23-.59l.82.35c-.53.57-.61.35-.68,1.44-.09,1.51.39,4.91-.54,5.82-1.12.94-14.3.43-17.04.49-2.66.06-5.99.21-8.55-.11-2.94-.36-5.7.74-8.45.14,0-.79-.09-1.68-.09-2.44,0-1.4.4-1.2.47-1.27l.35-.21c-1.06-.76-.85-1.76-.82-3.38.16-7.78-.57-21.33.24-27.48ZM5.95,48.82c.24-.51,2.08-2.34,1.7-4.6,0-.06-.66-2.28-.74-2.53-.47-1.38-.84-.56-.46-1.82,1.87-6.1-.51-25.87.65-36.21,6.54,0,13.05-.22,19.57-.24,8.48-.02,27.26-1.77,29,10.01.96,6.47-3.14,9.26-7.97,11.49.73.73,2.47,1.2,3.41,1.9,5.3,3.94,3.26,7.2,4.78,10.76,1.27-.48,2.89-5.03,3.7-6.88,2.46-5.61,2.38-5.48,5.62-10.25,1.95-2.87-2.97-3.58.19-7.13,1.51-1.69,1.45-2.32,2.73-2.31-.99,1.31-2.59,2.71-2.32,6.45,2.1-.84,3.81-4.54,4.49-6.74-.49-.89-.56-.52-1.03-1.22.26-1.25.1-.82.45-1.19,2.22,2.02,3.9,1.18,7.26,1.49.47,1.04.17,1.82.94,2.82.56-1.11-.22-1.54.17-2.75l5.73-.11c2.64,5.66,6.95,13.91,10.13,19.64,1.07,1.94,2.74,4.58,3.47,6.59-2.08-.02-4.21-.21-6.28-.08-1.05.06-3.22.31-4.09,1.03-.16.13-.22.17-.23.18,0,.01-.02.08-.18.31.47.11,2.28.4,2.71.55,1.22.43.09-.05.42.84l.28.47c-.72.89-1.35,1.07-1.55,2.44,2.12,1.33,3.54.4,4.15.26,1.32-.31,3.45-.36,4.86-.42l-.58-2.47c-1.35.55-3.43,3.41-6.4,1.41.72-.88.65-.38,1.81-.78,3.54-1.2.59-1.41,6.21-1.51.2,2.44.35,2.12,0,4.72,1.85.14.96-.45,2.46-.51l.27,1c-1.26.35-7,.27-8.67.25-4.69-.05-3.55-.02-5.34-3.43l.29-.17c1.83-.9,1.17-.06,1.63-1.19-3.86,0-1.8.38-3.9-1.83-2.42.06-7.82.39-10.27.08-1.57-.2-1.32-1.45-2.52-.48l.47.25-.47-.25c-1.95-.21-4.95,2.43-6.34,3.06l.7.91s.09.08.12.12c-.61,1.43-.89,1.9-1.67,2.9-4.11.11-19.01.46-22.21-.02-2.56-8.61.46-5.01-2.85-11.07-1.92-3.52-5.82-3.63-9.65-3.7-1.49-.03-3,0-4.47.06l-3.35.08c-.08.01-.15.03-.22.05l-.41.14c-.71-1.14-.39,11.56-.4,12.31-.05,2.81-.61,2.6-3.37,2.58-2.03-.02-4.09-.18-6.11.01-.64.74-2.87,5.55-2.87,6.61l-.8.84c-1.61-.5-2.07-1.32-2.64-2.72ZM7.42,51.77s-.04-.02-.06-.02c.02,0,.04.01.06.02ZM7.47,51.82s-.02-.03-.03-.04c.01,0,.03.02.03.04l.25.15-.25-.15ZM52,88.8c-1.59.97-2.22,2.55-2.76,3.11-.84.86-6.59,3.05-8.13,3.59-5.26,1.82-5.85.42-10.8.61-3.16.12-1.86.76-4.25-1.03-.86-.65-3.49-1.47-3.8-1.81-2.43-.69-4.67-3.4-6.05-4.46-.91-.7-1.06-.8-1.54-2.12-1.44-3.94-2.92-4.99-3.65-10.53-1.19-9.01,2.88-16.73,7.43-20.42,5.06-4.11,13.66-6.92,22.03-4.63,4.35,1.19,10.96,5.3,12.76,8.48.71,1.26,1.93,3.44,1.87,4.95-3.76.32-2.06,1.85-5,2.11-1.04.09-2.36.04-3.43.04l-2.68-.04c-.68-.11.24.35-.82-.26.36-.77-.54-.43,1.04-.57.65-.06,1.23.22,2.54-.32.33-.14.29-.11.52-.26.32-.2.27-.18.47-.38-.93-.24-1.93-.11-3.03-.12-3.03-.02-1.48-1.58-5.93-3.66-3.71-1.73-3-1.95-7.27-.83-1.19.31-1.55.8-2.41.89-.82-.54-.58-.86-1.71-1.14-1.27,1.81,1.12-.13-2.37,4.99-2.13,3.14-2.89,8.33-1.66,12,.32.97.74,1.66,1.04,2.63.53,1.75-.1,1.77-.12,3.06,5.85,5.1,18.64,5.5,19.06-4.27l12.34-.36c0,1.34.04,1.82-.35,2.96l-1.74,6.28c1.37-.08,1.72-.54,2.86-.16-1.29,1.24-2.85.65-4.44,1.62ZM97.28,82.31c-.77,1.98.45,2.27-2.34,4.99-1.87,1.81-2.12,4.43-4.77,5.19-.39-.65-.26-.41-.51-1.15l-.47-.98c-.91.99-.64,1.76-.93,2.75-.23.77-.12.39-.32.68-4.35,2.25-11.26,2.71-16.37.99-6.85-2.31-3.46-1.49-5.96-3.57-1.79-1.5-3.91-2.61-4.72-5.02-1.02-1.5-2.05-6.78-2.13-9.07-.06-1.6.15-3.59.29-5.18.19-2.14,2.05-6.28,3.04-8.2.5-.97,6.88-5.96,10.48-6.65,3.35-1.81,16.12-.74,20.35,4.84,1.14,1.51,1.34,7.34,1.3,9.36-.04,2.75.6,2.55-1.05,3.99.85.94,1.22.58,1.02,2.25-.05.46-.19.99-.1,1.54.21,1.29.18-.06.49,1.26-.01.42-1.4,1.89-.83,2.9,2.08.03,0,.04,1.78-1.94.69-.76,1.23-1.05,2.42-.94-.13,1.05-.37,1.21-.67,1.96ZM112.59,92.97c-3.69.28-3.03.57-4.89-2.1l-.54-.63c-.55,1.72-1.77,2.11-2.26,4.31l-2.66.07c-.09-3.46-.77-5.02-.79-5.68,1.23-.85,1.56-.18,2.08-2.13.55-2.05-.3-1.95-.94-3.08.71-.56,2.93-1.26,3.67-1.16,1.35.18,1.35,2.2,1.3,3.52l1.39.58-.63,2.52c1.84.42,1.05.39,1.65,2.12,1.81.25,1.35-.16,2.76-.52l-.14,2.17ZM170.93,92.43c-2.52.3-4.67-.26-7.25.34-2.11.49-4.29.7-6.6.71-2.5.02-5.08.04-7.58-.02-2.72-.07-3.55-1.03-6.42-.79.44-.68,1.12-1.03.96-1.77-.23-1.07-4.55-2.59-4.93-2.66-.54,1.84.62,2.85,1.05,4.27-3.64.2-7.27.47-10.93.03-.93-1.98-.71-4.79-1.91-5.66-.17-.12-.27-.17-.34-.19,0,0,0,.01,0,.02.13.54-.33-.12,0-.02.18-4.21,1.21-4.24-1.37-7.13-1.46-1.64-4.57-1.6-7.16-1.78-7.43-.49-4.79,1.41-6.77,2.11-1.47.52-1.47-.57-3.68-.46-1.37.06-2.76.19-4.19.25.26,1.49.74-.12.37,2.46-1.35.24-1.32.57-2.33-.11-.94-2.19-.92-19.31-.85-22.95.02-1.17.03-4.84.29-5.75.41-1.45,3.49-.92,4.97-.92,6.91,0,16.77-.92,23.19.38,4.06.82,5.48,1.77,7.11,4.8,1.42,2.65,2.08,6.52,1.22,9.79-.88,3.38-3.38,3.89-5.33,6.35.91.63,1.84,1.01,2.59,1.98.53.68,1.47,1.96,1.84,2.55,1.19,1.9,1.09,5.03,1.54,7.28,1.37.16,4.52.32,5.8-.19.18-5.23-.12-10.36-.25-15.52-.08-3.33-.97-13.43.38-15.69,2.11-.52,11.79-.44,14.65-.46,4.38-.03,9.77.04,13.49,1.44,15.78,5.92,12.64,35.63-1.59,37.32ZM219.23,85.08c-1.03,1.93-1.6,3.19-3.76,3.92l-.15-2.49c-1.68.09-1.35,2.19-1.68,3.97-4.22,1.05-7.91,2.56-12.62,1.34-6.82-1.76-5.05-1.33-7.55-3.7-.7-.67-1.41-.9-2.11-1.56-4.82-4.52-5.99-16.07-2.24-22.8,4.6-8.28,15.67-11.9,25.58-6.39,5.6,3.12,3.64,4.67,4.29,6.68.51,1.55.64,1.03.51,3.01-.21,3.26.74,3.56-1.08,5.7,2.59,4.71.31,5.45.24,7.5,1.55.08,1.49-.46,3.11-.41.19,3.56-1.28,2.83-2.56,5.23ZM222.34,79.59l-2.65.1c.44-1,1.05-1.59,1.69-2.2l1.43.14-.47,1.96ZM303.45,53.49c1.76-.97,4.95-.62,7.28-.71-.17-1.87-.55-.47-.83-2.36,1.02.22,2.43.77,3.42,1.16,1.72.69,1.01,1.15,2.25,1.89,1.49.88,2.85.89,5.5,2.8,1.45,1.05,2.92,2.49,3.66,4.89,1.32,4.26-.4,3.46-.76,4.83-.13.51,0,1.31.01,1.91-1.12-.43-1.42-1.37-2.61-2.15-.96-.63-2.15-1.16-2.9-1.68-.66.42-2.13,1.91-3.05.33-.4-.69-.24-.92-.82-1.64-2.96-3.67-6.41-2.15-10-2.43-.64-1.14-1.41-5.34-1.15-6.82ZM291.7,61.56c1.08-6.13,3.11-5.26,5.07-5.42l.02-1.48c1.3-.76,1.82-1.04,3.4-1.61,1.76,1.65,4.39,8.82.43,9.77-.49-1.78-.4-1.27.26-2.77-1.32-1.34-.97-2.34-1.92-3.83-1.58.08.65.23-1.03.39-.55.05-.72-.09-1.16-.47-.75.7-1.16.65-1.85,1.47.41.62.6.49,1.35.73-.16,1.83-.99,3.35-1.13,5.38-.12,1.75.15,4.5-1.06,5.53-2.09-1.15-2.98-4.38-2.39-7.69ZM287.99,65.48c-3.37.11-2.82-.38-3.17-1.54-.35-1.13.08-.6-.8-1.05.59,1.12.58,1.04.62,2.6-1.35-.2-1.81-.53-1.9-1.95-1.01,0-.51.49-1.27-.02.89-.98.9-.7,2.02-1.54l-.53-1.81,4.92-.76.11,6.07ZM258.89,85.04c-1.08.29.1-.28-.88-.08-.07,3.52.35,2.86-1.93,4.72-1.11.9-2.3,1.97-3.95,2.64-1.87.77-3.72.69-5.87.82-3.55.21-3.71.16-4.59,1.62h-3.55s-.41-1.28-.41-1.28c-2.07-.01-11.38.38-12.5-.22-.48-1.42-.6-16.91-.68-19.78-.12-4.67-1-15.75-.03-19.55,3.56-.47,9.75-.39,13.65-.48,6.65-.15,18.46-.62,19.46,8.39.63,5.69-3.42,7.86-4.51,9.45,5.93,4.37,6.63,4.08,5.77,13.76ZM280.17,89.87c-1.64-.08-2.66-.1-3.75.64-1.73,1.17-.71.08-2.84-.3-.04.05-.09.13-.12.17l-.57.87c-1.55-1.78-2.34-.97-5.17-.87-8.28.3-4.86-1.77-5.01-4.68-.07-1.34-.35-2.26-.35-3.66,0-1.4.31-2.56.26-3.91-.05-1.22-.42-2.18-.6-3.35-.38-2.44-.35-5.19.29-7.43.6-2.12.07-4.96.1-7.5,1.64-.27,3.39,0,4.77-.67l-2.61-.33c-.49-.95-.03-1.01.67-1.67,1.31.07,5.49,2.72,8.04,2.33,1.42-.22,4.7-3.53,6.17-4.4,1.21.74.4,1.08,2,1.25,1.96.21,4.32-1.78,6.04,2.05-5.35,0-3.67-.72-4.63-.92-1.41.2-3.48,1.12-4.36,1.85,1.24,1.51.95,3.83.98,6.35-2.45.03-6.78-.32-8.86.58l.3,4.88,15.4-.13c.76,2.1.53,3.43.32,5.81-2.65.59-12.32.09-14.53.38-.08,0-.15.02-.21.04-1.52.27-1.05,3.61-.81,4.83.48,2.45.93.44.03,4.19l1.22.63c.54-1.3.82-2.41.91-3.85,1.64,0,1.34.42,2.56.27,6.14-.74,6.83-.78,12.8-.18l.09,6.65c-2.84,0-5.71.23-8.54.08ZM277.51,77.77l-.06,2.06-1.36-.07-.33-.9c.45-.88.58-.9,1.75-1.09ZM323.5,86.53c-1.53,2.01-3.31,3.36-6.18,4.56-3.17,1.33-5.42,0-8.8-.34-3.02-.31-6.69-.09-9.49-.98-2.84-.9-3.56-2.18-4.79-3.26-.7-.61-.9-.45-1.48-.96-.36-.82-.14-.93-.66-1.78-1.04-1.7-1.87-2.47-1.44-5.84,1.16-.07,2.25-.28,3.42-.22,1.36.06,1.6.57,2.29,1.27.73-1.07.16-.87,1.53-1.43.97-.4,1.35-.52,2.46-.33,1.37,3.24.35,4.29,4.14,5.65,1.42.51,6.84,1.54,8.52,1,1.16-.38,2.04-1.39,2.19-2.81.46-4.3-5.11-3.73-6.82-5.51-.35-.36-.22-.33-.51-.71-1.17-1.54-.27.35-3.03-.39l-8.16-2.62,2.25-8.7c1.41.7.69,1.6,2.72,2.84l.16-1.14c-.03-.4-.12-.92-.15-1.37,2.52,1,3.38,3.71,4.09,6.17.7,2.41.35,1.81,1.07,2.26.62-2.22-.68-3.56-.73-5.66,3.19.48,13.38,4.01,15.58,5.54,4.37,3.04,5.8,9.5,1.81,14.75Z"/>
+      <path class="cls-1" d="M124.9,61.2c-2.31-1.23-9.51-.82-12.61-.81.07,1.49,1.26,4.38.93,5.11-.49,1.09-1.1.27-.96,2.37.23,3.69,3.81,2.14,6.5,2.03,2.13-.09,4.24.05,6.38-.08.62-1.5,4.59-6.05-.24-8.62Z"/>
+      <path class="cls-1" d="M244.28,75.87c-3.26-.02-6.54.09-9.8.11l.32,9.13,1.83.05-.7-1.7c2.95.81,4.08,2.02,7.85,1.74,7.76-.57,5.92-9.3.5-9.33Z"/>
+      <path class="cls-1" d="M243.06,69.23c2.42-.02,3.99-1.48,3.95-4.06-.04-2.72-1.62-3.6-4.23-3.85-2.18-.21-5.71.08-8.05.14l.17,7.83c2.74.02,5.47-.05,8.16-.07Z"/>
+      <path class="cls-1" d="M80.61,26.36c-.31-1.2-3.33-5.85-4-6.2l-4.7,10.61,10.14.17c-.07-1.38-.87-2.38-1.44-4.58Z"/>
+      <path class="cls-1" d="M208.65,59.33c.11-1.87-.11-2.86-2-2.97-2.02-.11-1.56.92-3.08,1.78,1.83,2.06,1.93,2.32,5.08,1.19Z"/>
+      <path class="cls-1" d="M107.89,41.88c-.69.38-.51,0-.9.85,1.43-.13,2.69-.53,3.95-.73,1.6-.25,3.23.15,4.9,0-.77-.49-3.14-.82-4.19-.99-3.65-.58-3.44-.54-3.56-1.77-.71.24-1.24.36-2.19.23.82.61,1.59.67,2.84,1.69l-.84.72Z"/>
+      <path class="cls-1" d="M150,41.73c-.71.45-.97.25-1.85.87,1.58.17,2.33-.36,3.58-.59,1.51-.28,3.06.13,4.66-.02-1.16-.67-3.25-.7-4.79-1.13-1.69-.47-2.84-1.22-4.81-1.35l.31.23c1.17.69,1.76.54,2.91,1.99Z"/>
+    </g>
+  </svg>
+  <p class="tagline">BUSCA TUS FOTOS POR RALLY Y TRAMO</p>
+</header>
+
+<div class="fila-volver">
+  <button class="btn-volver" id="btnVolver">← Volver</button>
+</div>
+<div class="breadcrumb" id="breadcrumb"></div>
+
+<div id="contenido">
+  <div class="vacio" id="cargando">Cargando...</div>
+</div>
+
+<div class="barra-seleccion" id="barraSeleccion">
+  <span id="contadorSeleccion">0 seleccionadas</span>
+  <button class="btn-lima" id="btnDescargarZip">Descargar selección (.zip)</button>
+</div>
+
+<div class="lightbox-overlay" id="lightbox">
+  <button class="lightbox-flecha izquierda" id="btnFlechaAnterior" aria-label="Foto anterior">‹</button>
+  <img id="lightboxImg" src="" alt="">
+  <button class="lightbox-flecha derecha" id="btnFlechaSiguiente" aria-label="Foto siguiente">›</button>
+  <div class="lightbox-credito" id="lightboxCredito"></div>
+  <div class="lightbox-acciones">
+    <a class="btn-lima" id="lightboxDescargar" href="#" target="_blank" style="text-decoration:none;">Descargar</a>
+    <button class="btn-cerrar-lightbox" id="btnCerrarLightbox">Cerrar</button>
+  </div>
+</div>
+
+<footer class="contacto">
+  ¿Consultas sobre tus fotos? Escribinos por WhatsApp:
+  <a href="https://wa.me/5490000000000" target="_blank">Lucas Martínez</a>
+</footer>
+
+<script>
+// ======= CONFIGURACIÓN =======
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzNyACKmpiYiVgIhKw-twzN5bM1xXgAmHhynXbx6rjcXobVRANouN7AfHzuQjzkzc5Y/exec';
+const ROOT_FOLDER_ID = '1ADqvynC4y9OEBF3vm7CqSr31KI9WEKkA';
+
+// ======= ESTADO =======
+let pila = [{ id: ROOT_FOLDER_ID, nombre: 'Carreras' }]; // breadcrumb stack
+let seleccionadas = new Set();
+let enGaleria = false;
+let fotosGaleria = []; // todas las fotos cargadas hasta ahora de la carpeta actual
+let carpetaGaleriaActualId = null;
+let indiceLightboxActual = -1;
+
+// ======= NAVEGACIÓN =======
+async function cargarNivel(folderId) {
+  enGaleria = false;
+  seleccionadas.clear();
+  actualizarBarraSeleccion();
+
+  const contenido = document.getElementById('contenido');
+  contenido.innerHTML = '<div class="vacio">Cargando...</div>';
+
+  const res = await fetch(`${BACKEND_URL}?action=listar&folderId=${folderId}`);
+  const data = await res.json();
+
+  if (data.error) {
+    contenido.innerHTML = `<div class="vacio">Error: ${data.error}</div>`;
+    return;
+  }
+
+  if (data.vacio) {
+    contenido.innerHTML = '<div class="vacio">Sin material disponible en esta sección todavía.</div>';
+    return;
+  }
+
+  if (data.subcarpetas.length === 0) {
+    // No hay subcarpetas pero sí hay archivos -> es el nivel de galería
+    cargarGaleria(folderId);
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'botonera';
+  const esNivelCarreras = folderId === ROOT_FOLDER_ID;
+  data.subcarpetas.forEach((c, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'boton-carpeta';
+
+    const esUltima = esNivelCarreras && i === data.subcarpetas.length - 1;
+    if (esUltima) {
+      btn.classList.add('en-vivo');
+      const badge = document.createElement('div');
+      badge.className = 'badge-vivo';
+      badge.textContent = 'EN VIVO';
+      btn.appendChild(badge);
+    }
+
+    const nombreSpan = document.createElement('div');
+    nombreSpan.textContent = c.nombre;
+    btn.appendChild(nombreSpan);
+
+    btn.onclick = () => {
+      pila.push({ id: c.id, nombre: c.nombre });
+      renderBreadcrumb();
+      cargarNivel(c.id);
+    };
+    grid.appendChild(btn);
+  });
+  contenido.innerHTML = '';
+  contenido.appendChild(grid);
+}
+
+let paginaActualToken = null;
+let cargandoMas = false;
+
+async function cargarGaleria(folderId, pageToken) {
+  enGaleria = true;
+  carpetaGaleriaActualId = folderId;
+  const contenido = document.getElementById('contenido');
+
+  if (!pageToken) {
+    // primera carga de esta carpeta: limpiamos todo
+    contenido.innerHTML = '<div class="vacio">Cargando fotos...</div>';
+    fotosGaleria = [];
+  }
+
+  let url = `${BACKEND_URL}?action=fotos&folderId=${folderId}`;
+  if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.error) {
+    contenido.innerHTML = `<div class="vacio">Error: ${data.error}</div>`;
+    return;
+  }
+
+  if (data.vacio) {
+    contenido.innerHTML = '<div class="vacio">Sin fotos en esta sección todavía.</div>';
+    return;
+  }
+
+  let grid = contenido.querySelector('.galeria');
+  if (!grid) {
+    contenido.innerHTML = '';
+    grid = document.createElement('div');
+    grid.className = 'galeria';
+    contenido.appendChild(grid);
+  }
+
+  const inicioIndice = fotosGaleria.length;
+  fotosGaleria.push(...data.archivos);
+
+  data.archivos.forEach((f, i) => {
+    const card = document.createElement('div');
+    card.className = 'foto-card';
+    card.dataset.id = f.id;
+
+    const indiceFoto = inicioIndice + i;
+
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.className = 'foto-check';
+    check.onclick = (e) => {
+      e.stopPropagation();
+      toggleSeleccion(f.id, card);
+    };
+
+    const img = document.createElement('img');
+    img.src = f.thumbnailUrl;
+    img.loading = 'lazy';
+    img.onclick = () => abrirLightbox(indiceFoto);
+
+    const acciones = document.createElement('div');
+    acciones.className = 'foto-acciones';
+    acciones.innerHTML = `
+      <a href="${f.descargaUrl}" target="_blank">Descargar</a>
+      <a href="#" onclick="copiarLink('${f.descargaUrl}'); return false;">Copiar link</a>
+    `;
+
+    card.appendChild(check);
+    card.appendChild(img);
+    card.appendChild(acciones);
+    grid.appendChild(card);
+  });
+
+  // sacamos el botón "cargar más" viejo si había, y ponemos uno nuevo si corresponde
+  const botonViejo = contenido.querySelector('.btn-cargar-mas');
+  if (botonViejo) botonViejo.remove();
+
+  paginaActualToken = data.siguientePagina;
+
+  if (paginaActualToken) {
+    const btnMas = document.createElement('button');
+    btnMas.className = 'btn-lima btn-cargar-mas';
+    btnMas.textContent = 'Cargar más fotos';
+    btnMas.style.display = 'block';
+    btnMas.style.margin = '16px auto 40px';
+    btnMas.onclick = () => {
+      if (cargandoMas) return;
+      cargandoMas = true;
+      btnMas.textContent = 'Cargando...';
+      btnMas.disabled = true;
+      cargarGaleria(folderId, paginaActualToken).then(() => { cargandoMas = false; });
+    };
+    contenido.appendChild(btnMas);
+  }
+}
+
+function toggleSeleccion(id, card) {
+  if (seleccionadas.has(id)) {
+    seleccionadas.delete(id);
+    card.classList.remove('seleccionada');
+    card.querySelector('.foto-check').checked = false;
+  } else {
+    seleccionadas.add(id);
+    card.classList.add('seleccionada');
+    card.querySelector('.foto-check').checked = true;
+  }
+  actualizarBarraSeleccion();
+}
+
+function actualizarBarraSeleccion() {
+  const barra = document.getElementById('barraSeleccion');
+  const contador = document.getElementById('contadorSeleccion');
+  if (seleccionadas.size > 0) {
+    barra.classList.add('activa');
+    contador.textContent = `${seleccionadas.size} seleccionada${seleccionadas.size > 1 ? 's' : ''}`;
+  } else {
+    barra.classList.remove('activa');
+  }
+}
+
+function copiarLink(url) {
+  navigator.clipboard.writeText(url);
+  alert('Link copiado');
+}
+
+document.getElementById('btnDescargarZip').onclick = async () => {
+  if (seleccionadas.size === 0) return;
+  const btn = document.getElementById('btnDescargarZip');
+  btn.disabled = true;
+  btn.textContent = 'Preparando zip...';
+
+  const res = await fetch(BACKEND_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'zip',
+      fileIds: Array.from(seleccionadas),
+      nombreZip: 'RallyCordobes'
+    })
+  });
+  const data = await res.json();
+
+  btn.disabled = false;
+  btn.textContent = 'Descargar selección (.zip)';
+
+  if (data.error) {
+    alert('Error al generar el zip: ' + data.error);
+    return;
+  }
+  window.open(data.descargaUrl, '_blank');
+};
+
+function nombreFotografoActual() {
+  // El fotógrafo es la carpeta un nivel arriba de Delantera/Integrales
+  if (pila.length >= 2) {
+    return pila[pila.length - 2].nombre;
+  }
+  return pila[pila.length - 1]?.nombre || '';
+}
+
+function abrirLightbox(indice) {
+  if (indice < 0 || indice >= fotosGaleria.length) return;
+  indiceLightboxActual = indice;
+  const f = fotosGaleria[indice];
+
+  const overlay = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  const credito = document.getElementById('lightboxCredito');
+  const btnDescargar = document.getElementById('lightboxDescargar');
+
+  // 1) Mostramos al instante la miniatura que ya está cargada (rápida, ya en caché del navegador)
+  img.src = f.thumbnailUrl;
+  img.classList.add('cargando-hd');
+
+  credito.innerHTML = `Foto: <span>${nombreFotografoActual()}</span> — © Rally Cordobés`;
+  btnDescargar.href = f.descargaUrl;
+  overlay.classList.add('activo');
+
+  // 2) De fondo, cargamos una versión más nítida (liviana) y la reemplazamos cuando esté lista
+  const urlMedia = f.thumbnailUrl.replace('sz=w300', 'sz=w1000');
+  const precarga = new Image();
+  precarga.onload = () => {
+    // solo reemplazamos si seguimos mirando la misma foto (no cerró/cambió mientras cargaba)
+    if (overlay.classList.contains('activo') && img.dataset.targetUrl === urlMedia) {
+      img.src = urlMedia;
+      img.classList.remove('cargando-hd');
+    }
+  };
+  img.dataset.targetUrl = urlMedia;
+  precarga.src = urlMedia;
+
+  actualizarFlechasLightbox();
+}
+
+function actualizarFlechasLightbox() {
+  const btnAnterior = document.getElementById('btnFlechaAnterior');
+  const btnSiguiente = document.getElementById('btnFlechaSiguiente');
+  btnAnterior.disabled = indiceLightboxActual <= 0;
+  // el botón siguiente solo se deshabilita si no hay más fotos cargadas Y no hay más páginas para pedir
+  btnSiguiente.disabled = (indiceLightboxActual >= fotosGaleria.length - 1) && !paginaActualToken;
+}
+
+function anteriorFoto() {
+  if (indiceLightboxActual > 0) abrirLightbox(indiceLightboxActual - 1);
+}
+
+async function siguienteFoto() {
+  if (indiceLightboxActual + 1 < fotosGaleria.length) {
+    abrirLightbox(indiceLightboxActual + 1);
+    return;
+  }
+  // ya no hay más fotos cargadas en memoria: si hay más páginas, las traemos y seguimos
+  if (paginaActualToken && carpetaGaleriaActualId) {
+    const btnSiguiente = document.getElementById('btnFlechaSiguiente');
+    btnSiguiente.disabled = true;
+    await cargarGaleria(carpetaGaleriaActualId, paginaActualToken);
+    if (indiceLightboxActual + 1 < fotosGaleria.length) {
+      abrirLightbox(indiceLightboxActual + 1);
+    }
+  }
+}
+
+document.getElementById('btnFlechaAnterior').onclick = (e) => { e.stopPropagation(); anteriorFoto(); };
+document.getElementById('btnFlechaSiguiente').onclick = (e) => { e.stopPropagation(); siguienteFoto(); };
+
+// Navegación por teclado (flechas y Escape)
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('lightbox').classList.contains('activo')) return;
+  if (e.key === 'ArrowRight') siguienteFoto();
+  else if (e.key === 'ArrowLeft') anteriorFoto();
+  else if (e.key === 'Escape') cerrarLightbox();
+});
+
+// Navegación por swipe (celular)
+let swipeStartX = null;
+const lightboxEl = document.getElementById('lightbox');
+lightboxEl.addEventListener('touchstart', (e) => {
+  swipeStartX = e.touches[0].clientX;
+}, { passive: true });
+lightboxEl.addEventListener('touchend', (e) => {
+  if (swipeStartX === null) return;
+  const deltaX = e.changedTouches[0].clientX - swipeStartX;
+  const UMBRAL = 45; // píxeles mínimos para considerarlo un swipe intencional
+  if (Math.abs(deltaX) > UMBRAL) {
+    if (deltaX < 0) siguienteFoto();
+    else anteriorFoto();
+  }
+  swipeStartX = null;
+}, { passive: true });
+
+function cerrarLightbox() {
+  const img = document.getElementById('lightboxImg');
+  document.getElementById('lightbox').classList.remove('activo');
+  img.src = '';
+  img.classList.remove('cargando-hd');
+  img.dataset.targetUrl = '';
+  indiceLightboxActual = -1;
+}
+
+document.getElementById('btnCerrarLightbox').onclick = cerrarLightbox;
+document.getElementById('lightbox').addEventListener('click', (e) => {
+  // cerrar si se clickea el fondo oscuro, no la imagen ni los botones
+  if (e.target.id === 'lightbox') cerrarLightbox();
+});
+
+// ======= BOTÓN VOLVER =======
+function goBack() {
+  if (pila.length <= 1) return;
+  pila.pop();
+  renderBreadcrumb();
+  cargarNivel(pila[pila.length - 1].id);
+}
+document.getElementById('btnVolver').onclick = goBack;
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  const btnVolver = document.getElementById('btnVolver');
+  btnVolver.classList.toggle('oculto', pila.length <= 1);
+
+  bc.innerHTML = '';
+  pila.forEach((nivel, i) => {
+    const span = document.createElement('span');
+    span.className = 'crumb';
+    span.textContent = nivel.nombre;
+    span.onclick = () => {
+      pila = pila.slice(0, i + 1);
+      renderBreadcrumb();
+      cargarNivel(nivel.id);
+    };
+    bc.appendChild(span);
+    if (i < pila.length - 1) {
+      const sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = '›';
+      bc.appendChild(sep);
+    }
+  });
+}
+
+// ======= INICIO =======
+renderBreadcrumb();
+cargarNivel(ROOT_FOLDER_ID);
+</script>
+
+</body>
+</html>
