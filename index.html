@@ -58,9 +58,18 @@
     letter-spacing: 2px;
     font-weight: bold;
   }
+  header p.subtagline {
+    margin: 6px 0 0;
+    color: var(--blanco);
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    font-weight: normal;
+    opacity: 0.9;
+  }
   .fila-volver {
     display: flex;
     justify-content: center;
+    gap: 10px;
     padding: 14px 20px 4px;
   }
   .btn-volver {
@@ -148,7 +157,39 @@
     display: block;
     cursor: pointer;
   }
+  .fila-acciones-galeria {
+    display: flex;
+    justify-content: center;
+    padding: 4px 20px 10px;
+  }
+  .btn-toggle-seleccion {
+    background: transparent;
+    border: 1px solid var(--gris-borde);
+    color: var(--blanco);
+    border-radius: 999px;
+    padding: 8px 22px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .btn-toggle-seleccion:hover { border-color: var(--lima); }
+  .btn-toggle-seleccion.activo {
+    background: var(--lima);
+    border-color: var(--lima);
+    color: #000;
+    font-weight: bold;
+  }
+  .btn-deseleccionar {
+    background: transparent;
+    border: 1px solid var(--lima);
+    color: var(--lima);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
   .foto-check {
+    display: none;
     position: absolute;
     top: 6px;
     left: 6px;
@@ -156,6 +197,7 @@
     height: 22px;
     accent-color: var(--lima);
   }
+  #contenido.modo-seleccion .foto-check { display: block; }
   .foto-acciones {
     display: flex;
     justify-content: space-between;
@@ -373,12 +415,18 @@
   </g>
   </svg>
   <p class="tagline">BUSCA TUS FOTOS POR RALLY Y TRAMO</p>
+  <p class="subtagline">Las mejores fotos, del mejor campeonato del país</p>
 </header>
 
 <div class="fila-volver">
+  <button class="btn-volver" id="btnInicio">🏠 Inicio</button>
   <button class="btn-volver" id="btnVolver">← Volver</button>
 </div>
 <div class="breadcrumb" id="breadcrumb"></div>
+
+<div class="fila-acciones-galeria" id="filaAccionesGaleria" style="display:none;">
+  <button class="btn-toggle-seleccion" id="btnToggleSeleccion">Seleccionar</button>
+</div>
 
 <div id="contenido">
   <div class="vacio" id="cargando">Cargando...</div>
@@ -386,7 +434,10 @@
 
 <div class="barra-seleccion" id="barraSeleccion">
   <span id="contadorSeleccion">0 seleccionadas</span>
-  <button class="btn-lima" id="btnDescargarZip">Descargar selección</button>
+  <div style="display:flex; gap:8px;">
+    <button class="btn-deseleccionar" id="btnDeseleccionarTodo">Deseleccionar</button>
+    <button class="btn-lima" id="btnDescargarZip">Descargar selección</button>
+  </div>
 </div>
 
 <div class="lightbox-overlay" id="lightbox">
@@ -465,6 +516,7 @@ let enGaleria = false;
 let fotosGaleria = []; // todas las fotos cargadas hasta ahora de la carpeta actual
 let carpetaGaleriaActualId = null;
 let indiceLightboxActual = -1;
+let modoSeleccion = false; // solo se puede seleccionar fotos si esto está activo
 
 // ======= NAVEGACIÓN =======
 async function cargarNivel(folderId) {
@@ -494,6 +546,8 @@ async function cargarNivel(folderId) {
     return;
   }
 
+  ocultarModoSeleccion();
+
   const grid = document.createElement('div');
   grid.className = 'botonera';
   const esNivelCarreras = folderId === ROOT_FOLDER_ID;
@@ -504,10 +558,6 @@ async function cargarNivel(folderId) {
     const esUltima = esNivelCarreras && i === data.subcarpetas.length - 1;
     if (esUltima) {
       btn.classList.add('en-vivo');
-      const badge = document.createElement('div');
-      badge.className = 'badge-vivo';
-      badge.textContent = 'ACTIVA';
-      btn.appendChild(badge);
     }
 
     const nombreSpan = document.createElement('div');
@@ -537,6 +587,7 @@ async function cargarGaleria(folderId, pageToken) {
     // primera carga de esta carpeta: limpiamos todo
     contenido.innerHTML = '<div class="vacio">Cargando fotos...</div>';
     fotosGaleria = [];
+    ocultarModoSeleccion();
   }
 
   let url = `${BACKEND_URL}?action=fotos&folderId=${folderId}`;
@@ -561,6 +612,7 @@ async function cargarGaleria(folderId, pageToken) {
     grid = document.createElement('div');
     grid.className = 'galeria';
     contenido.appendChild(grid);
+    document.getElementById('filaAccionesGaleria').style.display = 'flex';
   }
 
   const inicioIndice = fotosGaleria.length;
@@ -584,7 +636,13 @@ async function cargarGaleria(folderId, pageToken) {
     const img = document.createElement('img');
     img.src = f.thumbnailUrl;
     img.loading = 'lazy';
-    img.onclick = () => abrirLightbox(indiceFoto);
+    img.onclick = () => {
+      if (modoSeleccion) {
+        toggleSeleccion(f.id, card);
+      } else {
+        abrirLightbox(indiceFoto);
+      }
+    };
 
     const acciones = document.createElement('div');
     acciones.className = 'foto-acciones';
@@ -635,6 +693,46 @@ function toggleSeleccion(id, card) {
   actualizarBarraSeleccion();
 }
 
+// ======= MODO SELECCIÓN (activar/desactivar con el botón "Seleccionar") =======
+function actualizarUIModoSeleccion() {
+  const btn = document.getElementById('btnToggleSeleccion');
+  btn.textContent = modoSeleccion ? 'Cancelar selección' : 'Seleccionar';
+  btn.classList.toggle('activo', modoSeleccion);
+  document.getElementById('contenido').classList.toggle('modo-seleccion', modoSeleccion);
+}
+
+function deseleccionarTodo() {
+  seleccionadas.forEach(id => {
+    const card = document.querySelector(`.foto-card[data-id="${id}"]`);
+    if (card) {
+      card.classList.remove('seleccionada');
+      const chk = card.querySelector('.foto-check');
+      if (chk) chk.checked = false;
+    }
+  });
+  seleccionadas.clear();
+  actualizarBarraSeleccion();
+}
+
+function ocultarModoSeleccion() {
+  modoSeleccion = false;
+  deseleccionarTodo();
+  const fila = document.getElementById('filaAccionesGaleria');
+  if (fila) fila.style.display = 'none';
+  const btn = document.getElementById('btnToggleSeleccion');
+  if (btn) { btn.textContent = 'Seleccionar'; btn.classList.remove('activo'); }
+  const contenido = document.getElementById('contenido');
+  if (contenido) contenido.classList.remove('modo-seleccion');
+}
+
+document.getElementById('btnToggleSeleccion').onclick = () => {
+  modoSeleccion = !modoSeleccion;
+  if (!modoSeleccion) deseleccionarTodo();
+  actualizarUIModoSeleccion();
+};
+
+document.getElementById('btnDeseleccionarTodo').onclick = deseleccionarTodo;
+
 function actualizarBarraSeleccion() {
   const barra = document.getElementById('barraSeleccion');
   const contador = document.getElementById('contadorSeleccion');
@@ -651,6 +749,18 @@ function copiarLink(url) {
   alert('Link copiado');
 }
 
+function dispararDescarga(url) {
+  // Un iframe oculto por archivo evita que, al descargar varios seguidos,
+  // el navegador cancele las descargas anteriores (lo que pasaba con <a>.click()).
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+  setTimeout(() => {
+    if (iframe.parentNode) document.body.removeChild(iframe);
+  }, 15000);
+}
+
 document.getElementById('btnDescargarZip').onclick = () => {
   if (seleccionadas.size === 0) return;
   const btn = document.getElementById('btnDescargarZip');
@@ -663,15 +773,10 @@ document.getElementById('btnDescargarZip').onclick = () => {
     const foto = fotosGaleria.find(f => f.id === id);
     if (!foto) return;
 
-    // Escalonamos cada descarga un poco (el navegador bloquea varias
-    // descargas disparadas en el mismo instante)
+    // Escalonamos cada descarga un poco (el navegador puede bloquear
+    // varias descargas disparadas en el mismo instante)
     setTimeout(() => {
-      const a = document.createElement('a');
-      a.href = foto.descargaUrl;
-      a.download = foto.nombre || '';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      dispararDescarga(foto.descargaUrl);
 
       btn.textContent = `Descargando ${i + 1}/${ids.length}...`;
       if (i === ids.length - 1) {
@@ -680,7 +785,7 @@ document.getElementById('btnDescargarZip').onclick = () => {
           btn.textContent = 'Descargar selección';
         }, 600);
       }
-    }, i * 500);
+    }, i * 600);
   });
 };
 
@@ -805,10 +910,22 @@ function goBack() {
   cargarNivel(pila[pila.length - 1].id);
 }
 document.getElementById('btnVolver').onclick = goBack;
+
+// ======= BOTÓN INICIO =======
+function irInicio() {
+  if (pila.length <= 1) return;
+  pila = [{ id: ROOT_FOLDER_ID, nombre: 'Carreras' }];
+  renderBreadcrumb();
+  cargarNivel(ROOT_FOLDER_ID);
+}
+document.getElementById('btnInicio').onclick = irInicio;
+
 function renderBreadcrumb() {
   const bc = document.getElementById('breadcrumb');
   const btnVolver = document.getElementById('btnVolver');
+  const btnInicio = document.getElementById('btnInicio');
   btnVolver.classList.toggle('oculto', pila.length <= 1);
+  btnInicio.classList.toggle('oculto', pila.length <= 1);
 
   bc.innerHTML = '';
   pila.forEach((nivel, i) => {
