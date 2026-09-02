@@ -386,7 +386,7 @@
 
 <div class="barra-seleccion" id="barraSeleccion">
   <span id="contadorSeleccion">0 seleccionadas</span>
-  <button class="btn-lima" id="btnDescargarZip">Descargar selección (.zip)</button>
+  <button class="btn-lima" id="btnDescargarZip">Descargar selección</button>
 </div>
 
 <div class="lightbox-overlay" id="lightbox">
@@ -651,30 +651,37 @@ function copiarLink(url) {
   alert('Link copiado');
 }
 
-document.getElementById('btnDescargarZip').onclick = async () => {
+document.getElementById('btnDescargarZip').onclick = () => {
   if (seleccionadas.size === 0) return;
   const btn = document.getElementById('btnDescargarZip');
+  const ids = Array.from(seleccionadas);
+
   btn.disabled = true;
-  btn.textContent = 'Preparando zip...';
+  btn.textContent = `Descargando 0/${ids.length}...`;
 
-  const res = await fetch(BACKEND_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'zip',
-      fileIds: Array.from(seleccionadas),
-      nombreZip: 'RallyCordobes'
-    })
+  ids.forEach((id, i) => {
+    const foto = fotosGaleria.find(f => f.id === id);
+    if (!foto) return;
+
+    // Escalonamos cada descarga un poco (el navegador bloquea varias
+    // descargas disparadas en el mismo instante)
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = foto.descargaUrl;
+      a.download = foto.nombre || '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      btn.textContent = `Descargando ${i + 1}/${ids.length}...`;
+      if (i === ids.length - 1) {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Descargar selección';
+        }, 600);
+      }
+    }, i * 500);
   });
-  const data = await res.json();
-
-  btn.disabled = false;
-  btn.textContent = 'Descargar selección (.zip)';
-
-  if (data.error) {
-    alert('Error al generar el zip: ' + data.error);
-    return;
-  }
-  window.open(data.descargaUrl, '_blank');
 };
 
 function nombreFotografoActual() {
