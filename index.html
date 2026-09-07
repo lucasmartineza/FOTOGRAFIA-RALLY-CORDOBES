@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="preconnect" href="https://lh3.googleusercontent.com">
+<link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
+<link rel="preconnect" href="https://drive.google.com">
+<link rel="dns-prefetch" href="https://drive.google.com">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rally Cordobés - Galería</title>
@@ -635,6 +639,7 @@ async function cargarGaleria(folderId, pageToken) {
     const img = document.createElement('img');
     img.src = f.thumbnailUrl;
     img.loading = 'lazy';
+    img.decoding = 'async';
     img.onclick = () => {
       if (modoSeleccion) {
         toggleSeleccion(f.id, card);
@@ -815,7 +820,7 @@ function abrirLightbox(indice) {
   overlay.classList.add('activo');
 
   // 2) De fondo, cargamos una versión más nítida (liviana) y la reemplazamos cuando esté lista
-  const urlMedia = f.thumbnailUrl.replace('sz=w300', 'sz=w1000');
+  const urlMedia = f.thumbnailUrl.replace('=w200', '=w1000');
   const precarga = new Image();
   precarga.onload = () => {
     // solo reemplazamos si seguimos mirando la misma foto (no cerró/cambió mientras cargaba)
