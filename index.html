@@ -263,6 +263,80 @@
     50% { opacity: 0.3; }
   }
 
+  /* ===== BUSCADOR DE AUTOS (por número o apellido) ===== */
+  .buscador-auto {
+    max-width: 760px;
+    margin: 10px auto 4px;
+    padding: 14px 16px;
+    background: var(--gris);
+    border: 1px solid var(--gris-borde);
+    border-radius: 12px;
+  }
+  .buscador-auto[hidden] { display: none; }
+  .buscador-auto label {
+    display: block;
+    color: var(--lima);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .buscador-fila { display: flex; gap: 8px; }
+  .buscador-fila input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    color: var(--blanco);
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+  .buscador-fila input:focus { outline: none; border-color: var(--lima); }
+  .buscador-autos-lista { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip-auto {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--gris-borde);
+    border-radius: 6px;
+    color: var(--blanco);
+    padding: 3px 9px 3px 3px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .chip-auto:hover, .chip-auto.activo { border-color: var(--lima); }
+  .placa-auto {
+    display: inline-block;
+    min-width: 30px;
+    padding: 2px 5px;
+    background: var(--blanco);
+    color: #000;
+    border-radius: 4px;
+    font-weight: 800;
+    text-align: center;
+  }
+  .buscador-estado { margin: 8px 0 0; color: #999; font-size: 0.75rem; }
+  .buscador-estado:empty { display: none; }
+  .btn-ver-todos-autos { background: none; border: none; color: var(--lima); font-size: 0.8rem; cursor: pointer; }
+  .resultado-titulo {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 6px 0 4px;
+    text-align: center;
+  }
+  .resultado-titulo h2 { margin: 0; font-size: 1.15rem; }
+  .resultado-titulo .placa-auto { font-size: 1.15rem; min-width: 44px; }
+  .resultado-titulo p { margin: 0; color: #999; font-size: 0.85rem; width: 100%; }
+  @media (max-width: 600px) {
+    .buscador-fila { flex-direction: column; }
+  }
+
   /* ===== LIGHTBOX ===== */
   .lightbox-overlay {
     display: none;
@@ -427,6 +501,16 @@
 </div>
 <div class="breadcrumb" id="breadcrumb"></div>
 
+<form class="buscador-auto" id="buscadorAuto" role="search" hidden>
+  <label for="buscadorInput">Buscá tu auto</label>
+  <div class="buscador-fila">
+    <input id="buscadorInput" type="search" autocomplete="off" placeholder="Número o apellido del piloto o navegante">
+    <button class="btn-lima" type="submit">Buscar</button>
+  </div>
+  <div class="buscador-autos-lista" id="buscadorAutosLista"></div>
+  <p class="buscador-estado" id="buscadorEstado"></p>
+</form>
+
 <div class="fila-acciones-galeria" id="filaAccionesGaleria" style="display:none;">
   <button class="btn-toggle-seleccion" id="btnToggleSeleccion">Seleccionar</button>
 </div>
@@ -462,6 +546,14 @@
 // ======= CONFIGURACIÓN =======
 const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzNyACKmpiYiVgIhKw-twzN5bM1xXgAmHhynXbx6rjcXobVRANouN7AfHzuQjzkzc5Y/exec';
 const ROOT_FOLDER_ID = '1ADqvynC4y9OEBF3vm7CqSr31KI9WEKkA';
+
+// ======= BUSCADOR DE AUTOS =======
+// El índice (qué auto aparece en cada foto) lo arma solo el Apps Script "Buscador IA" a medida que se suben fotos a Drive.
+// Pegá acá la URL de esa implementación (termina en /exec). Si una carrera todavía no tiene índice, el buscador no aparece.
+const BUSCADOR_URL = 'https://script.google.com/macros/s/AKfycbxbH1b_EEqGIN546A4i1fWw34pEnMMRRafegkPqPJnJPcXInnIDsflpcbmWOswgPJi-/exec';
+const URL_MINIATURA = id => `https://lh3.googleusercontent.com/d/${id}=w200`;
+const URL_MINIATURA_ALT = id => `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
+const URL_DESCARGA = id => `https://drive.google.com/uc?export=download&id=${id}`;
 
 // ======= SPONSORS (franja inferior con autoroll) =======
 // Reemplazá "logoUrl" por la ruta real una vez que subas los logos a una
@@ -523,6 +615,7 @@ let modoSeleccion = false; // solo se puede seleccionar fotos si esto está acti
 
 // ======= NAVEGACIÓN =======
 async function cargarNivel(folderId) {
+  prepararBuscador();
   enGaleria = false;
   seleccionadas.clear();
   actualizarBarraSeleccion();
@@ -621,45 +714,7 @@ async function cargarGaleria(folderId, pageToken) {
   const inicioIndice = fotosGaleria.length;
   fotosGaleria.push(...data.archivos);
 
-  data.archivos.forEach((f, i) => {
-    const card = document.createElement('div');
-    card.className = 'foto-card';
-    card.dataset.id = f.id;
-
-    const indiceFoto = inicioIndice + i;
-
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.className = 'foto-check';
-    check.onclick = (e) => {
-      e.stopPropagation();
-      toggleSeleccion(f.id, card);
-    };
-
-    const img = document.createElement('img');
-    img.src = f.thumbnailUrl;
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.onclick = () => {
-      if (modoSeleccion) {
-        toggleSeleccion(f.id, card);
-      } else {
-        abrirLightbox(indiceFoto);
-      }
-    };
-
-    const acciones = document.createElement('div');
-    acciones.className = 'foto-acciones';
-    acciones.innerHTML = `
-      <a href="${f.descargaUrl}" target="_blank">Descargar</a>
-      <a href="#" onclick="copiarLink('${f.descargaUrl}'); return false;">Copiar link</a>
-    `;
-
-    card.appendChild(check);
-    card.appendChild(img);
-    card.appendChild(acciones);
-    grid.appendChild(card);
-  });
+  data.archivos.forEach((f, i) => grid.appendChild(crearTarjeta(f, inicioIndice + i)));
 
   // sacamos el botón "cargar más" viejo si había, y ponemos uno nuevo si corresponde
   const botonViejo = contenido.querySelector('.btn-cargar-mas');
@@ -682,6 +737,45 @@ async function cargarGaleria(folderId, pageToken) {
     };
     contenido.appendChild(btnMas);
   }
+}
+
+function crearTarjeta(f, indiceFoto) {
+  const card = document.createElement('div');
+  card.className = 'foto-card';
+  card.dataset.id = f.id;
+
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.className = 'foto-check';
+  check.onclick = (e) => {
+    e.stopPropagation();
+    toggleSeleccion(f.id, card);
+  };
+
+  const img = document.createElement('img');
+  img.src = f.thumbnailUrl;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  if (f.thumbnailAlt) img.onerror = () => { img.onerror = null; img.src = f.thumbnailAlt; };
+  img.onclick = () => {
+    if (modoSeleccion) {
+      toggleSeleccion(f.id, card);
+    } else {
+      abrirLightbox(indiceFoto);
+    }
+  };
+
+  const acciones = document.createElement('div');
+  acciones.className = 'foto-acciones';
+  acciones.innerHTML = `
+    <a href="${f.descargaUrl}" target="_blank">Descargar</a>
+    <a href="#" onclick="copiarLink('${f.descargaUrl}'); return false;">Copiar link</a>
+  `;
+
+  card.appendChild(check);
+  card.appendChild(img);
+  card.appendChild(acciones);
+  return card;
 }
 
 function toggleSeleccion(id, card) {
@@ -815,7 +909,7 @@ function abrirLightbox(indice) {
   img.src = f.thumbnailUrl;
   img.classList.add('cargando-hd');
 
-  credito.innerHTML = `Foto: <span>${nombreFotografoActual()}</span> — © Rally Cordobés`;
+  credito.innerHTML = `Foto: <span>${f.fotografo || nombreFotografoActual()}</span> — © Rally Cordobés`;
   btnDescargar.href = f.descargaUrl;
   overlay.classList.add('activo');
 
@@ -904,6 +998,127 @@ document.getElementById('btnCerrarLightbox').onclick = cerrarLightbox;
 document.getElementById('lightbox').addEventListener('click', (e) => {
   // cerrar si se clickea el fondo oscuro, no la imagen ni los botones
   if (e.target.id === 'lightbox') cerrarLightbox();
+});
+
+// ======= BUSCADOR: lógica =======
+const indices = {};             // id de carrera -> índice (o null si no tiene)
+let carreraBuscadorId = null;
+let consultaActual = '';
+let mostrarTodosAutos = false;
+
+function normalizar(t) { return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); }
+function escaparHtml(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+async function prepararBuscador() {
+  const panel = document.getElementById('buscadorAuto');
+  // el buscador aparece dentro de una carrera (segundo nivel en adelante)
+  const carrera = pila.length >= 2 ? pila[1] : null;
+  if (!carrera) { panel.hidden = true; carreraBuscadorId = null; return; }
+  if (carrera.id !== carreraBuscadorId) {
+    carreraBuscadorId = carrera.id;
+    consultaActual = '';
+    document.getElementById('buscadorInput').value = '';
+    mostrarTodosAutos = false;
+  }
+  if (!(carrera.id in indices)) {
+    try {
+      const r = await fetch(`${BUSCADOR_URL}?action=indice&carrera=${encodeURIComponent(carrera.id)}`);
+      const ind = r.ok ? await r.json() : null;
+      indices[carrera.id] = ind && ind.fotos && ind.fotos.length ? ind : null;
+    } catch (e) { indices[carrera.id] = null; }
+  }
+  if (carrera.id !== carreraBuscadorId) return;      // cambió de carrera mientras cargaba
+  panel.hidden = !indices[carrera.id];
+  const ind = indices[carrera.id];
+  document.getElementById('buscadorEstado').textContent = ind && ind.pendientes
+    ? `Estamos procesando ${ind.pendientes} fotos nuevas: en unos minutos van a aparecer también en la búsqueda.` : '';
+  pintarChipsAutos();
+}
+
+function pintarChipsAutos() {
+  const ind = indices[carreraBuscadorId];
+  const cont = document.getElementById('buscadorAutosLista');
+  cont.innerHTML = '';
+  if (!ind) return;
+  const visibles = mostrarTodosAutos ? ind.autos : ind.autos.slice(0, 12);
+  visibles.forEach(a => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip-auto' + (normalizar(consultaActual) === a.n ? ' activo' : '');
+    const ap = s => (s || '').split(' ')[0];
+    b.innerHTML = `<span class="placa-auto">${escaparHtml(a.n)}</span><span>${escaparHtml(ap(a.piloto))}${a.navegante ? ' / ' + escaparHtml(ap(a.navegante)) : ''}</span>`;
+    b.onclick = () => { document.getElementById('buscadorInput').value = a.n; buscarAuto(a.n); };
+    cont.appendChild(b);
+  });
+  if (ind.autos.length > 12) {
+    const v = document.createElement('button');
+    v.type = 'button';
+    v.className = 'btn-ver-todos-autos';
+    v.textContent = mostrarTodosAutos ? 'Ver menos' : `Ver los ${ind.autos.length} autos`;
+    v.onclick = () => { mostrarTodosAutos = !mostrarTodosAutos; pintarChipsAutos(); };
+    cont.appendChild(v);
+  }
+}
+
+function autosCoincidentes(ind, q) {
+  const partes = normalizar(q).split(/[\s,#]+/).filter(Boolean);
+  const nums = partes.filter(p => /^\d+$/.test(p)).map(p => String(+p));
+  const palabras = partes.filter(p => !/^\d+$/.test(p) && p.length >= 2);
+  return ind.autos.filter(a => {
+    if (nums.length && !nums.includes(a.n)) return false;
+    const texto = normalizar(a.piloto + ' ' + a.navegante);
+    return palabras.every(w => texto.includes(w));
+  });
+}
+
+function buscarAuto(q) {
+  const ind = indices[carreraBuscadorId];
+  consultaActual = (q || '').trim();
+  pintarChipsAutos();
+  if (!ind || !consultaActual) return;
+  const contenido = document.getElementById('contenido');
+  ocultarModoSeleccion();
+  enGaleria = true;
+  paginaActualToken = null;
+  carpetaGaleriaActualId = null;
+
+  const coinciden = autosCoincidentes(ind, consultaActual);
+  if (!coinciden.length) {
+    fotosGaleria = [];
+    contenido.innerHTML = `<div class="vacio">No encontramos ningún auto con “${escaparHtml(consultaActual)}”.<br>Probá con el número del auto o con el apellido del piloto o del navegante.<br><br><button class="btn-volver" type="button" onclick="limpiarBusqueda()">Ver carpetas</button></div>`;
+    return;
+  }
+  const nums = new Set(coinciden.map(a => a.n));
+  fotosGaleria = ind.fotos.filter(f => f.autos.some(n => nums.has(n))).map(f => ({
+    id: f.id,
+    thumbnailUrl: URL_MINIATURA(f.id),
+    thumbnailAlt: URL_MINIATURA_ALT(f.id),
+    descargaUrl: URL_DESCARGA(f.id),
+    fotografo: (f.carpeta || '').split('/')[0],
+  }));
+
+  const a = coinciden[0];
+  const titulo = coinciden.length === 1
+    ? `<span class="placa-auto">${escaparHtml(a.n)}</span><h2>${escaparHtml(a.piloto)}${a.navegante ? ' / ' + escaparHtml(a.navegante) : ''}</h2>`
+    : `<h2>${coinciden.length} autos con “${escaparHtml(consultaActual)}”</h2>`;
+  contenido.innerHTML = `<div class="resultado-titulo">${titulo}<p>${fotosGaleria.length} fotos en toda la carrera · <a href="#" style="color:var(--lima)" onclick="limpiarBusqueda(); return false;">ver carpetas</a></p></div>`;
+  const grid = document.createElement('div');
+  grid.className = 'galeria';
+  fotosGaleria.forEach((f, i) => grid.appendChild(crearTarjeta(f, i)));
+  contenido.appendChild(grid);
+  document.getElementById('filaAccionesGaleria').style.display = 'flex';
+}
+
+function limpiarBusqueda() {
+  consultaActual = '';
+  document.getElementById('buscadorInput').value = '';
+  pintarChipsAutos();
+  cargarNivel(pila[pila.length - 1].id);
+}
+
+document.getElementById('buscadorAuto').addEventListener('submit', (e) => {
+  e.preventDefault();
+  buscarAuto(document.getElementById('buscadorInput').value);
 });
 
 // ======= BOTÓN VOLVER =======
